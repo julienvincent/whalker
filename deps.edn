@@ -1,0 +1,7 @@
+{:paths ["src" "classes"]
+ :deps {funcool/promesa {:mvn/version "11.0.678"}
+        babashka/process {:mvn/version "0.5.21"}
+        com.github.kwhat/jnativehook {:mvn/version "2.2.2"}}
+
+ :aliases {:precompile {:extra-paths ["dev"]
+                        :exec-fn user/compile-classes}}}
