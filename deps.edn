@@ -1,7 +1,13 @@
 {:paths ["src" "classes"]
+
  :deps {funcool/promesa {:mvn/version "11.0.678"}
         babashka/process {:mvn/version "0.5.21"}
         com.github.kwhat/jnativehook {:mvn/version "2.2.2"}}
 
  :aliases {:precompile {:extra-paths ["dev"]
-                        :exec-fn user/compile-classes}}}
+                        :exec-fn user/compile-classes}
+
+           :build {:deps {io.github.clojure/tools.build {:mvn/version "0.9.5"}}
+                   :ns-default build}
+
+           :native {:extra-deps {com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}}}}}
