@@ -40,6 +40,7 @@
 
       {:get-data (fn []
                    (.toByteArray output-stream))
+       :started-at (System/nanoTime)
        :stop (fn []
                (.close output-stream)
 
@@ -50,8 +51,13 @@
                (.close line))})))
 
 (defn stop-audio-capture [capture]
-  ((:stop capture))
-  ((:get-data capture)))
+  (let [dx (- (System/nanoTime) (:started-at capture))
+        ms (->> (/ dx 1000000.0)
+                (format "%.2f")
+                Double/parseDouble)]
+    ((:stop capture))
+    {:data ((:get-data capture))
+     :duration-ms ms}))
 
 (defn write-audio-to-file [data]
   (let [file (create-tmp-file)

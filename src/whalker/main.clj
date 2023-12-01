@@ -23,7 +23,7 @@
         selection (StringSelection. data)]
     (.setContents clipboard selection nil)))
 
-(defn- handle-sample [audio-data]
+(defn- handle-sample [{audio-data :data duration-ms :duration-ms}]
   (p/vthread
    (try
      (let [file (audio/write-audio-to-file audio-data)
@@ -31,6 +31,7 @@
 
            res (proc/sh ["/Users/julienvincent/code/whisper.cpp/main"
                          "-nt"
+                         "-d" duration-ms
                          "-m" "/Users/julienvincent/code/whisper.cpp/models/ggml-medium.en.bin"
                          "-f" file-path])]
 
@@ -42,7 +43,9 @@
                  set-clipboard)
              (notification/notify "Audio Transcribed"
                                   "Audio capture has been transcribed and put into your clipboard"))
-         (println "Failed to process audio data" (:err res))))
+         (println "Failed to process audio data" (:err res)))
+
+       (io/delete-file file))
 
      (catch Exception e
        (println "Failed to process audio data" e)))))
