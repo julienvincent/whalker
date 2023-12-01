@@ -17,7 +17,7 @@
        (map #(format "%02x" %))
        (apply str)))
 
-(defn- create-tmp-file []
+(defn- create-tmp-file ^java.io.File []
   (io/file (System/getProperty "java.io.tmpdir") (str "whalker-" (gen-hash 5) ".wav")))
 
 (defn start-capture-audio []
@@ -59,7 +59,7 @@
     {:data ((:get-data capture))
      :duration-ms ms}))
 
-(defn write-audio-to-file [data]
+(defn write-audio-to-file ^java.io.File [data]
   (let [file (create-tmp-file)
         stream (ByteArrayInputStream. data)
         format (AudioFormat. 16000.0 16 1 true true)]

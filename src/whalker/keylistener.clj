@@ -2,6 +2,8 @@
   (:import
    [com.github.kwhat.jnativehook GlobalScreen NativeHookException]))
 
+(set! *warn-on-reflection* true)
+
 (def ^:private registered (atom false))
 
 (defn create-keylistener []

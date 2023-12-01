@@ -1,16 +1,19 @@
 (ns whalker.main
   (:require
    [babashka.process :as proc]
+   [clojure.java.io :as io]
    [clojure.string :as str]
    [promesa.core :as p]
    [promesa.exec.csp :as c]
    [whalker.audio :as audio]
-   [whalker.notification :as notification]
-   [whalker.keylistener :as keylistener])
+   [whalker.keylistener :as keylistener]
+   [whalker.notification :as notification])
   (:import
    [java.awt Toolkit]
    [java.awt.datatransfer StringSelection])
   (:gen-class))
+
+(set! *warn-on-reflection* true)
 
 (defn handle-event [chords event]
   (case (:action event)
@@ -71,7 +74,3 @@
                  (recur chords nil))
 
              :else (recur chords capture))))))))
-
-(comment
-  (-main)
-  nil)

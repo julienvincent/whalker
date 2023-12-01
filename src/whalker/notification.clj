@@ -8,6 +8,8 @@
     TrayIcon$MessageType]
    [java.awt Toolkit]))
 
+(set! *warn-on-reflection* true)
+
 (defn notify [title message]
   (when (SystemTray/isSupported)
     (let [tray (SystemTray/getSystemTray)

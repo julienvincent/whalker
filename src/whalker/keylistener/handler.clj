@@ -14,14 +14,14 @@
 (defn -init []
   [[] {:stream (c/chan)}])
 
-(defn -nativeKeyPressed [this e]
+(defn -nativeKeyPressed [^whalker.keylistener.Handler this ^NativeKeyEvent e]
   (let [{stream :stream} (.state this)]
     (c/put stream {:action :down
                    :code (.getKeyCode e)
                    :key (NativeKeyEvent/getKeyText (.getKeyCode e))
                    :native-event e})))
 
-(defn -nativeKeyReleased [this e]
+(defn -nativeKeyReleased [^whalker.keylistener.Handler this ^NativeKeyEvent e]
   (let [{stream :stream} (.state this)]
     (c/put stream {:action :up
                    :code (.getKeyCode e)
