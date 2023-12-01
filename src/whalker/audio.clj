@@ -36,19 +36,19 @@
                       (let [read (.read line buffer 0 1024)]
                         (try (.write output-stream buffer 0 read)
                              (catch Exception _)))
-                      (recur))))]
+                      (recur)))
+
+                  (.close output-stream))]
 
       {:get-data (fn []
                    (.toByteArray output-stream))
        :started-at (System/nanoTime)
        :stop (fn []
-               (.close output-stream)
+               (.stop line)
+               (.close line)
 
                (reset! running? false)
-               @writer
-
-               (.stop line)
-               (.close line))})))
+               @writer)})))
 
 (defn stop-audio-capture [capture]
   (let [dx (- (System/nanoTime) (:started-at capture))

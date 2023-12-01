@@ -1,4 +1,6 @@
 (ns whalker.keylistener
+  (:require
+   [promesa.exec.csp :as c])
   (:import
    [com.github.kwhat.jnativehook GlobalScreen NativeHookException]))
 
@@ -16,6 +18,7 @@
         (System/exit 1)))
     (reset! registered true))
 
-  (let [handler (whalker.keylistener.Handler.)]
+  (let [event-stream (c/chan)
+        handler (whalker.keylistener.Handler. {:event-handler #(c/put event-stream %)})]
     (GlobalScreen/addNativeKeyListener handler)
-    (:stream (.state handler))))
+    event-stream))
