@@ -25,8 +25,8 @@ build-native: build native-image
 build-and-run: build
   java --enable-preview -jar target/cli.jar
 
-run:
-  clojure -M -m whalker.main
+run *ARGS:
+  clojure -M -m whalker.main {{ARGS}}
 
 run-with-reflection:
   $GRAALVM_HOME/bin/java -agentlib:native-image-agent=config-output-dir=./target/graal/ -jar target/whalker.jar

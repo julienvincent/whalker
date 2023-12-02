@@ -88,33 +88,48 @@
 
              :else (recur chords capture))))))))
 
+(defn start-keylogger! []
+  (let [key-stream (keylistener/create-keylistener)]
+    (p/vthread
+     (loop []
+       (when-let [event (c/take! key-stream)]
+         (println (select-keys event [:action :code :key]))
+         (recur))))))
+
 (def cli-config
-  [["--config" "-c"
+  [["-c" "--config"
     :id :config
     :default "config.edn"]
 
-   ["--transcriber" "-t" "The transcriber implementation to use"
+   [nil "--key-logger" "Start the script in a debug mode that prints key-pressed. 
+                        Useful for inspecting keycodes for chord configuration"
+    :id :key-logger]
+
+   ["-t" "--transcriber" "The transcriber implementation to use"
     :id :transcriber
     :default :jni]
 
-   ["--model-path" "-m" "Filesystem path to the whisper model"
+   ["-m" "--model-path" "Filesystem path to the whisper model"
     :id :model-path]
 
-   ["--bin-path" nil "Filesystem path to the whisper.cpp built executable. Required when --transcriber=bin"
+   [nil "--bin-path" "Filesystem path to the whisper.cpp built executable. Required when --transcriber=bin"
     :id :bin-path]
 
-   ["--lib-path" nil "Filesystem path to the libwhisper.so native lib. Only used when --transcriber=jni"
+   [nil "--lib-path" "Filesystem path to the libwhisper.so native lib. Only used when --transcriber=jni"
     :id :lib-path]])
 
 (defn -main [& args]
-  (let [{opts :options} (cli/parse-opts args cli-config)
-        config-path (:config opts)
+  (let [{opts :options} (cli/parse-opts args cli-config)]
+    (when (:key-logger opts)
+      @(start-keylogger!))
 
-        config (-> (when config-path (util.config/load-config config-path))
-                   (merge opts)
-                   util.config/parse-config)]
+    (let [config-path (:config opts)
 
-    (doseq [[key value] config]
-      (println (str (name key) "=" value)))
+          config (-> (when config-path (util.config/load-config config-path))
+                     (merge opts)
+                     util.config/parse-config)]
 
-    (start! config)))
+      (doseq [[key value] config]
+        (println (str (name key) "=" value)))
+
+      (start! config))))
