@@ -4,6 +4,7 @@
    [promesa.core :as p])
   (:import
    [java.io ByteArrayInputStream ByteArrayOutputStream]
+   [java.nio ByteBuffer ByteOrder]
    [javax.sound.sampled
     AudioFileFormat$Type
     AudioFormat
@@ -56,8 +57,15 @@
                 (format "%.2f")
                 Double/parseDouble)]
     ((:stop capture))
-    {:data ((:get-data capture))
+    {:audio-data ((:get-data capture))
      :duration-ms ms}))
+
+(comment
+
+  (def capture (start-capture-audio))
+  (def audio (stop-audio-capture capture))
+
+  nil)
 
 (defn write-audio-to-file ^java.io.File [data]
   (let [file (create-tmp-file)
@@ -70,3 +78,38 @@
      file)
 
     file))
+
+;; The below audio->sample implementations were based off of the test code here:
+;; https://github.com/GiviMAD/whisper-jni/blob/298eb26d13a7dda460767c631ea7144f8ded049f/src/test/java/io/github/givimad/whisperjni/WhisperJNITest.java#L213
+
+(defn buffer->samples [^ByteBuffer buffer]
+  (let [short-buffer (.asShortBuffer buffer)
+        samples (float-array (/ (.capacity buffer) 2))]
+    (loop [i 0]
+      (if (.hasRemaining short-buffer)
+        (let [val (Float/min (/ (.get short-buffer) Short/MAX_VALUE) 1.0)]
+          (aset samples i (Float/max -1.0 val))
+          (recur (inc i)))
+
+        samples))))
+
+(defn audio-data->samples [audio-data]
+  (let [stream (ByteArrayInputStream. audio-data)
+        format (AudioFormat. 16000.0 16 1 true true)
+
+        audio-stream (AudioInputStream. stream format (count audio-data))
+        capture-buffer (ByteBuffer/allocate (.available audio-stream))]
+
+    (.order capture-buffer ByteOrder/BIG_ENDIAN)
+    (.read stream (.array capture-buffer))
+
+    (buffer->samples capture-buffer)))
+
+(defn audio-file->samples [file-path]
+  (let [stream (AudioSystem/getAudioInputStream (io/file file-path))
+        capture-buffer (ByteBuffer/allocate (.available stream))]
+
+    (.order capture-buffer ByteOrder/LITTLE_ENDIAN)
+    (.read stream (.array capture-buffer))
+
+    (buffer->samples capture-buffer)))

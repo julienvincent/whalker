@@ -1,13 +1,13 @@
 (ns whalker.main
   (:require
-   [babashka.process :as proc]
-   [clojure.java.io :as io]
-   [clojure.string :as str]
    [promesa.core :as p]
    [promesa.exec.csp :as c]
    [whalker.audio :as audio]
    [whalker.keylistener :as keylistener]
-   [whalker.notification :as notification])
+   [whalker.notification :as notification]
+   [whalker.whisper.api :as whisper.api]
+   [whalker.whisper.shell :as whisper.shell]
+   [whalker.whisper.whisper-jni :as whisper.jni])
   (:import
    [java.awt Toolkit]
    [java.awt.datatransfer StringSelection])
@@ -26,51 +26,59 @@
         selection (StringSelection. data)]
     (.setContents clipboard selection nil)))
 
-(defn- handle-sample [{audio-data :data duration-ms :duration-ms}]
+(defn- handle-sample [transcriber recording]
+  (println "Transcribing audio...")
+
   (p/vthread
    (try
-     (let [file (audio/write-audio-to-file audio-data)
-           file-path (.getPath file)
+     (let [time-start (System/nanoTime)
+           text (whisper.api/transcribe transcriber recording)
+           dx (- (System/nanoTime) time-start)
+           seconds (->> (/ dx 1000000000.0)
+                        (format "%.2f")
+                        Double/parseDouble)]
 
-           res (proc/sh ["/Users/julienvincent/code/whisper.cpp/main"
-                         "-nt"
-                         "-d" duration-ms
-                         "-m" "/Users/julienvincent/code/whisper.cpp/models/ggml-medium.en.bin"
-                         "-f" file-path])]
+       (set-clipboard text)
 
-       (if (= 0 (:exit res))
-         (do (-> res
-                 :out
-                 (str/replace #"\[BLANK_AUDIO\]" "")
-                 str/trim
-                 set-clipboard)
-             (notification/notify "Audio Transcribed"
-                                  "Audio capture has been transcribed and put into your clipboard"))
-         (println "Failed to process audio data" (:err res)))
+       (notification/notify "Audio Transcribed"
+                            "Audio capture has been transcribed and put into your clipboard")
 
-       (io/delete-file file))
+       (println (str "Transcription completed successfully after " seconds "s"))
+       (println "  " text))
 
      (catch Exception e
        (println "Failed to process audio data" e)))))
 
-(defn -main [& _]
-  (let [key-stream (keylistener/create-keylistener)]
+(defn start! [opts]
+  (let [key-stream (keylistener/create-keylistener)
+
+        shell-transcriber (whisper.shell/create-shell-transcriber
+                           {:bin-path "/Users/julienvincent/code/whisper.cpp/main"
+                            :model-path "/Users/julienvincent/code/whisper.cpp/models/ggml-large-v3.bin"})
+
+        jni-transcriber (whisper.jni/create-jni-transcriber
+                         {:lib-opts {:whisper-lib-path "/Users/julienvincent/code/whisper.cpp/libwhisper.so"}
+                          :model-path "/Users/julienvincent/code/whisper.cpp/models/ggml-large-v3.bin"})]
 
     (p/vthread
      (loop [chords #{} capture nil]
        (when-let [event (c/take! key-stream)]
-
          (let [chords (handle-event chords event)
                is-match? (= #{3675 0} chords)]
 
            (cond
              (and (not capture)
                   is-match?)
-             (recur chords (audio/start-capture-audio))
+             (do (println "Key pressed. Starting audio capture...")
+                 (recur chords (audio/start-capture-audio)))
 
              (and capture
                   (not is-match?))
-             (do (handle-sample (audio/stop-audio-capture capture))
+             (do (println "Key released.")
+                 (handle-sample jni-transcriber (audio/stop-audio-capture capture))
                  (recur chords nil))
 
              :else (recur chords capture))))))))
+
+(defn -main [& _]
+  (start! {}))

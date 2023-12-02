@@ -2,7 +2,8 @@
 
  :deps {funcool/promesa {:mvn/version "11.0.678"}
         babashka/process {:mvn/version "0.5.21"}
-        com.github.kwhat/jnativehook {:mvn/version "2.2.2"}}
+        com.github.kwhat/jnativehook {:mvn/version "2.2.2"}
+        io.github.givimad/whisper-jni {:mvn/version "1.5.1"}}
 
  :aliases {:precompile {:extra-paths ["dev"]
                         :exec-fn user/compile-classes}
