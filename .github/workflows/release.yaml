@@ -82,6 +82,8 @@ jobs:
   #       path: whalker-${{ matrix.binary-name }}.tar.gz
 
   release:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     needs: 
     - build-jar
