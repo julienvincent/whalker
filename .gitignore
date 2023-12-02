@@ -5,6 +5,8 @@
 .cpcache
 .nrepl-port
 
+*.metal
+
 config.edn
 
 target

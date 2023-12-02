@@ -17,7 +17,6 @@ native-image:
     -march=native \
     -o target/whalker \
     -H:+UnlockExperimentalVMOptions \
-    -H:+PrintJNIConfiguration \
     -H:ConfigurationFileDirectories=./graal/ \
     -H:+ReportExceptionStackTraces
 
