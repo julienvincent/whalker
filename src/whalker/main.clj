@@ -1,5 +1,6 @@
 (ns whalker.main
   (:require
+   [clojure.string :as str]
    [clojure.tools.cli :as cli]
    [promesa.core :as p]
    [promesa.exec.csp :as c]
@@ -16,11 +17,6 @@
   (:gen-class))
 
 (set! *warn-on-reflection* true)
-
-(defn handle-event [chords event]
-  (case (:action event)
-    :down (conj chords (:code event))
-    :up (disj chords (:code event))))
 
 (defn set-clipboard [data]
   (let [clipboard (-> (Toolkit/getDefaultToolkit)
@@ -51,6 +47,19 @@
      (catch Exception e
        (println "Failed to process audio data" e)))))
 
+(defn handle-event [state event]
+  (case (:action event)
+    :down (-> state
+              (update :key-chord conj (:key event))
+              (update :code-chord conj (:code event)))
+    :up (-> state
+            (update :key-chord disj (:key event))
+            (update :code-chord disj (:code event)))))
+
+(defn chords-match? [chord state]
+  (or (= chord (:key-chord state))
+      (= chord (:code-chord state))))
+
 (defn start! [opts]
   (let [key-stream (keylistener/create-keylistener)
 
@@ -69,24 +78,25 @@
             :model-path (:model-path opts)}))]
 
     (p/vthread
-     (loop [chords #{} capture nil]
+     (loop [state {:key-chord #{} :code-chord #{}}
+            capture nil]
        (when-let [event (c/take! key-stream)]
-         (let [chords (handle-event chords event)
-               is-match? (= #{3675 0} chords)]
+         (let [next-state (handle-event state event)
+               is-match? (chords-match? (:chord opts) next-state)]
 
            (cond
              (and (not capture)
                   is-match?)
              (do (println "Key pressed. Starting audio capture...")
-                 (recur chords (audio/start-capture-audio)))
+                 (recur next-state (audio/start-capture-audio)))
 
              (and capture
                   (not is-match?))
              (do (println "Key released.")
                  (handle-sample transcriber (audio/stop-audio-capture capture))
-                 (recur chords nil))
+                 (recur next-state nil))
 
-             :else (recur chords capture))))))))
+             :else (recur next-state capture))))))))
 
 (defn start-keylogger! []
   (let [key-stream (keylistener/create-keylistener)]
@@ -97,30 +107,41 @@
          (recur))))))
 
 (def cli-config
-  [["-c" "--config"
+  [["-c" "--config CONFIG"
     :id :config
     :default "config.edn"]
 
-   [nil "--key-logger" "Start the script in a debug mode that prints key-pressed. 
-                        Useful for inspecting keycodes for chord configuration"
-    :id :key-logger]
+   [nil "--keylogger" "Start the script in a debug mode that prints key-pressed. 
+                      Useful for inspecting keycodes for chord configuration"
+    :id :keylogger]
 
-   ["-t" "--transcriber" "The transcriber implementation to use"
+   ["-k" "--chord CHORD" "The chord to press to activate the recorder"
+    :id :chord
+    :parse-fn (fn [val]
+                (let [keys (str/split val #"\+")
+                      as-int (try
+                               (->> keys
+                                    (map #(Integer/parseInt %))
+                                    set)
+                               (catch Exception _ nil))]
+                  (or as-int (set keys))))]
+
+   ["-t" "--transcriber TRANSCRIBER" "The transcriber implementation to use"
     :id :transcriber
     :default :jni]
 
-   ["-m" "--model-path" "Filesystem path to the whisper model"
+   ["-m" "--model-path PATH" "Filesystem path to the whisper model"
     :id :model-path]
 
-   [nil "--bin-path" "Filesystem path to the whisper.cpp built executable. Required when --transcriber=bin"
+   [nil "--bin-path PATH" "Filesystem path to the whisper.cpp built executable. Required when --transcriber=bin"
     :id :bin-path]
 
-   [nil "--lib-path" "Filesystem path to the libwhisper.so native lib. Only used when --transcriber=jni"
+   [nil "--lib-path PATH" "Filesystem path to the libwhisper.so native lib. Only used when --transcriber=jni"
     :id :lib-path]])
 
 (defn -main [& args]
   (let [{opts :options} (cli/parse-opts args cli-config)]
-    (when (:key-logger opts)
+    (when (:keylogger opts)
       @(start-keylogger!))
 
     (let [config-path (:config opts)
@@ -132,4 +153,4 @@
       (doseq [[key value] config]
         (println (str (name key) "=" value)))
 
-      (start! config))))
+      @(start! config))))

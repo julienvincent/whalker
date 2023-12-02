@@ -16,14 +16,14 @@
 (defn -nativeKeyPressed [^whalker.keylistener.Handler this ^NativeKeyEvent e]
   (let [{handler :event-handler} (.state this)]
     (handler {:action :down
-              :code (.getKeyCode e)
+              :code (.getRawCode e)
               :key (NativeKeyEvent/getKeyText (.getKeyCode e))
               :native-event e})))
 
 (defn -nativeKeyReleased [^whalker.keylistener.Handler this ^NativeKeyEvent e]
   (let [{handler :event-handler} (.state this)]
     (handler {:action :up
-              :code (.getKeyCode e)
+              :code (.getRawCode e)
               :key (NativeKeyEvent/getKeyText (.getKeyCode e))
               :native-event e})))
 

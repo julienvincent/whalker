@@ -19,13 +19,17 @@
 (def ?Config
   [:and
    [:map
-    [:model-path [:maybe :string]]]
+    [:model-path [:maybe :string]]
+    [:chord [:or [:set :int] [:set :string]]]]
 
    [:or ?BinTranscriber ?JniTranscriber]])
 
 (defn load-config [path]
-  (->> (slurp (io/file path))
-       edn/read-string))
+  (try
+    (->> (slurp (io/file path))
+         edn/read-string)
+    (catch Exception _
+      {})))
 
 (defn parse-config [config]
   (try
