@@ -1,8 +1,10 @@
 (ns whalker.main
   (:require
+   [clojure.tools.cli :as cli]
    [promesa.core :as p]
    [promesa.exec.csp :as c]
    [whalker.audio :as audio]
+   [whalker.config :as util.config]
    [whalker.keylistener :as keylistener]
    [whalker.notification :as notification]
    [whalker.whisper.api :as whisper.api]
@@ -52,13 +54,19 @@
 (defn start! [opts]
   (let [key-stream (keylistener/create-keylistener)
 
-        shell-transcriber (whisper.shell/create-shell-transcriber
-                           {:bin-path "/Users/julienvincent/code/whisper.cpp/main"
-                            :model-path "/Users/julienvincent/code/whisper.cpp/models/ggml-large-v3.bin"})
+        transcriber
+        (cond
+          (= :bin (:transcriber opts))
+          (whisper.shell/create-shell-transcriber
+           {:bin-path (:bin-path opts)
+            :model-path (:model-path opts)})
 
-        jni-transcriber (whisper.jni/create-jni-transcriber
-                         {:lib-opts {:whisper-lib-path "/Users/julienvincent/code/whisper.cpp/libwhisper.so"}
-                          :model-path "/Users/julienvincent/code/whisper.cpp/models/ggml-large-v3.bin"})]
+          (= :jni (:transcriber opts))
+          (whisper.jni/create-jni-transcriber
+           {:lib-opts (cond-> nil
+                        (:lib-path opts)
+                        (assoc :lib-path (:lib-path opts)))
+            :model-path (:model-path opts)}))]
 
     (p/vthread
      (loop [chords #{} capture nil]
@@ -75,10 +83,38 @@
              (and capture
                   (not is-match?))
              (do (println "Key released.")
-                 (handle-sample jni-transcriber (audio/stop-audio-capture capture))
+                 (handle-sample transcriber (audio/stop-audio-capture capture))
                  (recur chords nil))
 
              :else (recur chords capture))))))))
 
-(defn -main [& _]
-  (start! {}))
+(def cli-config
+  [["--config" "-c"
+    :id :config
+    :default "config.edn"]
+
+   ["--transcriber" "-t" "The transcriber implementation to use"
+    :id :transcriber
+    :default :jni]
+
+   ["--model-path" "-m" "Filesystem path to the whisper model"
+    :id :model-path]
+
+   ["--bin-path" nil "Filesystem path to the whisper.cpp built executable. Required when --transcriber=bin"
+    :id :bin-path]
+
+   ["--lib-path" nil "Filesystem path to the libwhisper.so native lib. Only used when --transcriber=jni"
+    :id :lib-path]])
+
+(defn -main [& args]
+  (let [{opts :options} (cli/parse-opts args cli-config)
+        config-path (:config opts)
+
+        config (-> (when config-path (util.config/load-config config-path))
+                   (merge opts)
+                   util.config/parse-config)]
+
+    (doseq [[key value] config]
+      (println (str (name key) "=" value)))
+
+    (start! config)))

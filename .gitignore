@@ -5,5 +5,7 @@
 .cpcache
 .nrepl-port
 
+config.edn
+
 target
 classes

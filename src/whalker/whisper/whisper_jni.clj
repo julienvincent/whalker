@@ -14,11 +14,11 @@
   (WhisperJNI/loadLibrary)
   (WhisperJNI/setLibraryLogger nil))
 
-(defn- load-custom [{:keys [whisper-lib-path enable-logging?]}]
+(defn- load-custom [{:keys [lib-path enable-logging?]}]
   (let [load-options (WhisperJNI$LoadOptions.)]
     #_(when-not enable-logging?
       (set! (.logger load-options) (fn [_])))
-    (set! (.whisperLib load-options) (.toPath (io/file whisper-lib-path)))
+    (set! (.whisperLib load-options) (.toPath (io/file lib-path)))
     (WhisperJNI/loadLibrary load-options)))
 
 (defn- create-whisper-context [{:keys [model-path lib-opts enable-logging?]}]
