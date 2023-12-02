@@ -17,7 +17,7 @@
 (defn- load-custom [{:keys [lib-path enable-logging?]}]
   (let [load-options (WhisperJNI$LoadOptions.)]
     #_(when-not enable-logging?
-      (set! (.logger load-options) (fn [_])))
+        (set! (.logger load-options) (fn [_])))
     (set! (.whisperLib load-options) (.toPath (io/file lib-path)))
     (WhisperJNI/loadLibrary load-options)))
 
@@ -39,8 +39,11 @@
         {:keys [whisper context]} context]
     (set! (.durationMs params) duration-ms)
     (.full whisper context params samples (count samples))
-    (-> (.fullGetSegmentText whisper context 0)
-        str/trim)))
+    (->> (range (.fullNSegments whisper context))
+         (map (fn [i]
+                (.fullGetSegmentText whisper context i)))
+         str/join
+         str/trim)))
 
 (defn create-jni-transcriber [config]
   (let [context (create-whisper-context config)]
