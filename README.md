@@ -4,12 +4,12 @@ This is a small wrapper around [whisper.cpp](https://github.com/ggerganov/whispe
 
 ## Usage
 
-This tool requires that you download whisper ml models separately. This was tested on the models provided by `whisper.cpp` - head [to the whisper.cpp model docs](https://github.com/ggerganov/whisper.cpp/tree/master/models) for instructions on how to download them.
+This tool requires that you download whisper ml models separately. This was tested on the models provided by `whisper.cpp` - head to [the whisper.cpp model docs](https://github.com/ggerganov/whisper.cpp/tree/master/models) for instructions on how to download them.
 
 Once you have an appropriate whisper ml model on your machine you can proceed to downloading the whalker jar from the [releases page](https://github.com/julienvincent/whalker/releases) and then run:
 
 ```bash
-java -jar <whalker-jar-file> --model-path=/path/to/downloaded/model.bin --chord Ctrl+Shift+1
+java -jar whalker.jar --model-path=/path/to/downloaded/model.bin --chord Ctrl+Shift+1
 ```
 
 Native binaries will eventually be made available one I can figure out how to get JNI working with GraalVM.
@@ -28,6 +28,20 @@ The config file looks as follows:
 ```
 
 Any key in the config file can be used as a cli flag. For example `--chord` and `--model-path` can be given as cli args.
+
+### Chords
+
+When specifying key chords it is recommended to use the numeric key codes like `59+56+18` instead of the textual codes like `Ctrl+Shift+1` because there is some bug either in the keylogger lib I am using or in my usage of it that causes the textual codes to be unstable.
+
+To find the raw numeric keycodes that you can use you can run the jar in keylogger mode by adding the flag `--keylogger`.
+
+```bash
+java -jar whalker.jar --keylogger
+```
+
+This will print out to console every keypress. You can then press the keys you are wanting to use and see what their raw keycodes are.
+
+---
 
 ## Using the GPU
 
